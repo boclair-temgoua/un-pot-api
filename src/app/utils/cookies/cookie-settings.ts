@@ -23,12 +23,12 @@ const settingsMap: {
         httpOnly: false,
         secure: true,
         domain: config.cookie_access.domain,
-        sameSite: 'lax',
+        sameSite: 'strict',
     },
     test: {
         httpOnly: false,
         secure: true,
         domain: config.cookie_access.domain,
-        sameSite: 'lax',
+        sameSite: 'strict',
     },
 };
