@@ -2,17 +2,22 @@ import { PaginationType } from '../../app/utils/pagination';
 import { Order } from '../../models';
 
 export type GetOrdersSelections = {
-  search?: string;
-  pagination?: PaginationType;
-  userId?: Order['userId'];
+    search?: string;
+    pagination?: PaginationType;
+    orderNumber?: Order['orderNumber'];
+    organizationBuyerId?: Order['organizationBuyerId'];
+    organizationSellerId?: Order['organizationSellerId'];
 };
 
 export type GetOneOrderSelections = {
-  orderId: Order['id'];
+    orderId: Order['id'];
+    orderNumber?: Order['orderNumber'];
+    organizationBuyerId?: Order['organizationBuyerId'];
+    organizationSellerId?: Order['organizationSellerId'];
 };
 
 export type UpdateOrderSelections = {
-  orderId: Order['id'];
+    orderId: Order['id'];
 };
 
 export type CreateOrderOptions = Partial<Order>;

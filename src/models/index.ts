@@ -5,7 +5,6 @@ export * from './CartOrder';
 export * from './Category';
 export * from './Comment';
 export * from './Contact';
-export * from './Contribution';
 export * from './Contributor';
 export * from './Conversation';
 export * from './Country';

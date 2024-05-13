@@ -1,92 +1,94 @@
 import {
-  HttpException,
-  HttpStatus,
-  Injectable,
-  NotFoundException,
+    HttpException,
+    HttpStatus,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Donation } from '../../models/Donation';
 import { Repository } from 'typeorm';
-import {
-  CreateDonationsOptions,
-  GetOneDonationsSelections,
-  UpdateDonationsOptions,
-  UpdateDonationsSelections,
-} from './donations.type';
 import { useCatch } from '../../app/utils/use-catch';
+import { Donation } from '../../models/Donation';
+import {
+    CreateDonationsOptions,
+    GetOneDonationsSelections,
+    UpdateDonationsOptions,
+    UpdateDonationsSelections,
+} from './donations.type';
 
 @Injectable()
 export class DonationsService {
-  constructor(
-    @InjectRepository(Donation)
-    private driver: Repository<Donation>,
-  ) {}
+    constructor(
+        @InjectRepository(Donation)
+        private driver: Repository<Donation>
+    ) {}
 
-  async findOneBy(selections: GetOneDonationsSelections): Promise<Donation> {
-    const { donationId } = selections;
-    let query = this.driver
-      .createQueryBuilder('donation')
-      .where('donation.deletedAt IS NULL');
+    async findOneBy(selections: GetOneDonationsSelections): Promise<Donation> {
+        const { donationId } = selections;
+        let query = this.driver
+            .createQueryBuilder('donation')
+            .where('donation.deletedAt IS NULL');
 
-    if (donationId) {
-      query = query.andWhere('donation.id = :id', { id: donationId });
+        if (donationId) {
+            query = query.andWhere('donation.id = :id', { id: donationId });
+        }
+
+        const [error, result] = await useCatch(query.getOne());
+        if (error)
+            throw new HttpException('Donation not found', HttpStatus.NOT_FOUND);
+
+        return result;
     }
 
-    const [error, result] = await useCatch(query.getOne());
-    if (error)
-      throw new HttpException('Donation not found', HttpStatus.NOT_FOUND);
+    /** Create one Gifts to the database. */
+    async createOne(options: CreateDonationsOptions): Promise<Donation> {
+        const { title, price, organizationId, messageWelcome, description } =
+            options;
 
-    return result;
-  }
+        const donation = new Donation();
+        donation.title = title;
+        donation.price = price;
+        donation.organizationId = organizationId;
+        donation.description = description;
+        donation.messageWelcome = messageWelcome;
 
-  /** Create one Gifts to the database. */
-  async createOne(options: CreateDonationsOptions): Promise<Donation> {
-    const { title, price, userId, messageWelcome, description } = options;
+        const query = this.driver.save(donation);
 
-    const donation = new Donation();
-    donation.title = title;
-    donation.price = price;
-    donation.userId = userId;
-    donation.userId = userId;
-    donation.description = description;
-    donation.messageWelcome = messageWelcome;
+        const [error, result] = await useCatch(query);
+        if (error) throw new NotFoundException(error);
 
-    const query = this.driver.save(donation);
-
-    const [error, result] = await useCatch(query);
-    if (error) throw new NotFoundException(error);
-
-    return result;
-  }
-
-  /** Update one Donations to the database. */
-  async updateOne(
-    selections: UpdateDonationsSelections,
-    options: UpdateDonationsOptions,
-  ): Promise<Donation> {
-    const { donationId } = selections;
-    const { title, price, userId, messageWelcome, description } = options;
-
-    let findQuery = this.driver.createQueryBuilder('donation');
-
-    if (donationId) {
-      findQuery = findQuery.where('donation.id = :id', { id: donationId });
+        return result;
     }
 
-    const [errorFind, donation] = await useCatch(findQuery.getOne());
-    if (errorFind) throw new NotFoundException(errorFind);
+    /** Update one Donations to the database. */
+    async updateOne(
+        selections: UpdateDonationsSelections,
+        options: UpdateDonationsOptions
+    ): Promise<Donation> {
+        const { donationId } = selections;
+        const { title, price, organizationId, messageWelcome, description } =
+            options;
 
-    donation.title = title;
-    donation.price = price;
-    donation.userId = userId;
-    donation.userId = userId;
-    donation.description = description;
-    donation.messageWelcome = messageWelcome;
-    const query = this.driver.save(donation);
+        let findQuery = this.driver.createQueryBuilder('donation');
 
-    const [errorUp, result] = await useCatch(query);
-    if (errorUp) throw new NotFoundException(errorUp);
+        if (donationId) {
+            findQuery = findQuery.where('donation.id = :id', {
+                id: donationId,
+            });
+        }
 
-    return result;
-  }
+        const [errorFind, donation] = await useCatch(findQuery.getOne());
+        if (errorFind) throw new NotFoundException(errorFind);
+
+        donation.title = title;
+        donation.price = price;
+        donation.organizationId = organizationId;
+        donation.description = description;
+        donation.messageWelcome = messageWelcome;
+        const query = this.driver.save(donation);
+
+        const [errorUp, result] = await useCatch(query);
+        if (errorUp) throw new NotFoundException(errorUp);
+
+        return result;
+    }
 }

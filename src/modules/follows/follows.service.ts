@@ -1,67 +1,69 @@
 import {
-  HttpException,
-  HttpStatus,
-  Injectable,
-  NotFoundException,
+    HttpException,
+    HttpStatus,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import {
-  WithPaginationResponse,
-  withPagination,
+    WithPaginationResponse,
+    withPagination,
 } from '../../app/utils/pagination';
 import { useCatch } from '../../app/utils/use-catch';
 import { Follow } from '../../models/Follow';
 import {
-  CreateFollowOptions,
-  GetFollowsSelections,
-  GetOneFollowSelections,
-  UpdateFollowOptions,
-  UpdateFollowSelections,
+    CreateFollowOptions,
+    GetFollowsSelections,
+    GetOneFollowSelections,
+    UpdateFollowOptions,
+    UpdateFollowSelections,
 } from './follows.type';
 
 @Injectable()
 export class FollowsService {
-  constructor(
-    @InjectRepository(Follow)
-    private driver: Repository<Follow>,
-  ) {}
+    constructor(
+        @InjectRepository(Follow)
+        private driver: Repository<Follow>
+    ) {}
 
-  async findAll(
-    selections: GetFollowsSelections,
-  ): Promise<WithPaginationResponse | null> {
-    const { search, pagination, userId, followerId } = selections;
+    async findAll(
+        selections: GetFollowsSelections
+    ): Promise<WithPaginationResponse | null> {
+        const { search, pagination, organizationId, followerId } = selections;
 
-    let query = this.driver
-      .createQueryBuilder('follow')
-      .select('follow.followerId', 'followerId')
-      .addSelect('follow.createdAt', 'createdAt')
-      .where('follow.deletedAt IS NULL')
-      .leftJoin('follow.follower', 'follower')
-      .leftJoin('follower.profile', 'profileFollowing')
-      .leftJoin('follow.user', 'user')
-      .leftJoin('user.profile', 'profileFollower');
+        let query = this.driver
+            .createQueryBuilder('follow')
+            .select('follow.followerId', 'followerId')
+            .addSelect('follow.createdAt', 'createdAt')
+            .where('follow.deletedAt IS NULL')
+            .leftJoin('follow.follower', 'follower')
+            .leftJoin('follower.profile', 'profileFollowing')
+            .leftJoin('follow.user', 'user')
+            .leftJoin('user.profile', 'profileFollower');
 
-    if (userId) {
-      query = query
-        .addSelect(
-          /*sql*/ `jsonb_build_object(
+        if (organizationId) {
+            query = query
+                .addSelect(
+                    /*sql*/ `jsonb_build_object(
         'firstName', "profileFollowing"."firstName",
         'lastName', "profileFollowing"."lastName",
         'fullName', "profileFollowing"."fullName",
         'image', "profileFollowing"."image",
         'color', "profileFollowing"."color",
-        'userId', "follower"."id",
+        'organizationId', "follower"."id",
         'username', "follower"."username"
-    ) AS "profile"`,
-        )
-        .andWhere('follow.userId = :userId', { userId });
-    }
+    ) AS "profile"`
+                )
+                .andWhere('follow.organizationId = :organizationId', {
+                    organizationId,
+                });
+        }
 
-    if (followerId) {
-      query = query
-        .addSelect(
-          /*sql*/ `jsonb_build_object(
+        if (followerId) {
+            query = query
+                .addSelect(
+                    /*sql*/ `jsonb_build_object(
         'firstName', "profileFollower"."firstName",
         'lastName', "profileFollower"."lastName",
         'fullName', "profileFollower"."fullName",
@@ -69,139 +71,156 @@ export class FollowsService {
         'color', "profileFollower"."color",
         'userId', "user"."id",
         'username', "user"."username"
-    ) AS "profile"`,
-        )
-        .andWhere('follow.followerId = :followerId', { followerId });
+    ) AS "profile"`
+                )
+                .andWhere('follow.followerId = :followerId', { followerId });
+        }
+
+        if (search) {
+            query = query.andWhere(
+                new Brackets((qb) => {
+                    qb.where('follower.email ::text ILIKE :search', {
+                        search: `%${search}%`,
+                    })
+                        .orWhere(
+                            'profileFollower.firstName ::text ILIKE :search',
+                            {
+                                search: `%${search}%`,
+                            }
+                        )
+                        .orWhere(
+                            'profileFollower.lastName ::text ILIKE :search',
+                            {
+                                search: `%${search}%`,
+                            }
+                        )
+                        .orWhere(
+                            'profileFollower.fullName ::text ILIKE :search',
+                            {
+                                search: `%${search}%`,
+                            }
+                        );
+                })
+            );
+        }
+
+        const [errorRowCount, rowCount] = await useCatch(query.getCount());
+        if (errorRowCount) throw new NotFoundException(errorRowCount);
+
+        const [error, follows] = await useCatch(
+            query
+                .orderBy('follow.createdAt', pagination?.sort)
+                .limit(pagination.limit)
+                .offset(pagination.offset)
+                .getRawMany()
+        );
+        if (error) throw new NotFoundException(error);
+
+        return withPagination({
+            pagination,
+            rowCount,
+            value: follows,
+        });
     }
 
-    if (search) {
-      query = query.andWhere(
-        new Brackets((qb) => {
-          qb.where('follower.email ::text ILIKE :search', {
-            search: `%${search}%`,
-          })
-            .orWhere('profileFollower.firstName ::text ILIKE :search', {
-              search: `%${search}%`,
-            })
-            .orWhere('profileFollower.lastName ::text ILIKE :search', {
-              search: `%${search}%`,
-            })
-            .orWhere('profileFollower.fullName ::text ILIKE :search', {
-              search: `%${search}%`,
+    async findAllNotPaginate(selections: GetFollowsSelections): Promise<any> {
+        const { organizationId, followerId } = selections;
+
+        let query = this.driver
+            .createQueryBuilder('follow')
+            .select('follow.followerId', 'followerId')
+            .addSelect('follow.organizationId', 'organizationId')
+            .where('follow.deletedAt IS NULL');
+
+        if (organizationId) {
+            query = query.andWhere('follow.organizationId = :organizationId', {
+                organizationId,
             });
-        }),
-      );
+        }
+
+        if (followerId) {
+            query = query.andWhere('follow.followerId = :followerId', {
+                followerId,
+            });
+        }
+
+        const [error, follows] = await useCatch(query.getRawMany());
+        if (error) throw new NotFoundException(error);
+
+        return follows;
     }
 
-    const [errorRowCount, rowCount] = await useCatch(query.getCount());
-    if (errorRowCount) throw new NotFoundException(errorRowCount);
+    async findOneBy(selections: GetOneFollowSelections): Promise<Follow> {
+        const { followId, followerId, organizationId } = selections;
+        let query = this.driver
+            .createQueryBuilder('follow')
+            .where('follow.deletedAt IS NULL');
 
-    const [error, follows] = await useCatch(
-      query
-        .orderBy('follow.createdAt', pagination?.sort)
-        .limit(pagination.limit)
-        .offset(pagination.offset)
-        .getRawMany(),
-    );
-    if (error) throw new NotFoundException(error);
+        if (organizationId) {
+            query = query.andWhere('follow.organizationId = :organizationId', {
+                organizationId,
+            });
+        }
 
-    return withPagination({
-      pagination,
-      rowCount,
-      value: follows,
-    });
-  }
+        if (followerId) {
+            query = query.andWhere('follow.followerId = :followerId', {
+                followerId,
+            });
+        }
 
-  async findAllNotPaginate(selections: GetFollowsSelections): Promise<any> {
-    const { userId, followerId } = selections;
+        if (followId) {
+            query = query.andWhere('follow.id = :id', {
+                id: followId,
+            });
+        }
 
-    let query = this.driver
-      .createQueryBuilder('follow')
-      .select('follow.followerId', 'followerId')
-      .addSelect('follow.userId', 'userId')
-      .where('follow.deletedAt IS NULL');
+        const [error, result] = await useCatch(query.getOne());
+        if (error)
+            throw new HttpException('follow not found', HttpStatus.NOT_FOUND);
 
-    if (userId) {
-      query = query.andWhere('follow.userId = :userId', { userId });
+        return result;
     }
 
-    if (followerId) {
-      query = query.andWhere('follow.followerId = :followerId', { followerId });
+    /** Create one Follow to the database. */
+    async createOne(options: CreateFollowOptions): Promise<Follow> {
+        const { organizationId, followerId } = options;
+
+        const follow = new Follow();
+        follow.followerId = followerId;
+        follow.organizationId = organizationId;
+
+        const query = this.driver.save(follow);
+
+        const [error, result] = await useCatch(query);
+        if (error) throw new NotFoundException(error);
+
+        return result;
     }
 
-    const [error, follows] = await useCatch(query.getRawMany());
-    if (error) throw new NotFoundException(error);
+    /** Update one Follow to the database. */
+    async updateOne(
+        selections: UpdateFollowSelections,
+        options: UpdateFollowOptions
+    ): Promise<Follow> {
+        const { followId } = selections;
+        const { deletedAt } = options;
 
-    return follows;
-  }
+        let findQuery = this.driver.createQueryBuilder('follow');
 
-  async findOneBy(selections: GetOneFollowSelections): Promise<Follow> {
-    const { followId, followerId, userId } = selections;
-    let query = this.driver
-      .createQueryBuilder('follow')
-      .where('follow.deletedAt IS NULL');
+        if (followId) {
+            findQuery = findQuery.where('follow.id = :id', { id: followId });
+        }
 
-    if (userId) {
-      query = query.andWhere('follow.userId = :userId', { userId });
+        const [errorFind, follow] = await useCatch(findQuery.getOne());
+        if (errorFind) throw new NotFoundException(errorFind);
+
+        follow.deletedAt = deletedAt;
+
+        const query = this.driver.save(follow);
+
+        const [errorUp, result] = await useCatch(query);
+        if (errorUp) throw new NotFoundException(errorUp);
+
+        return result;
     }
-
-    if (followerId) {
-      query = query.andWhere('follow.followerId = :followerId', { followerId });
-    }
-
-    if (followId) {
-      query = query.andWhere('follow.id = :id', {
-        id: followId,
-      });
-    }
-
-    const [error, result] = await useCatch(query.getOne());
-    if (error)
-      throw new HttpException('follow not found', HttpStatus.NOT_FOUND);
-
-    return result;
-  }
-
-  /** Create one Follow to the database. */
-  async createOne(options: CreateFollowOptions): Promise<Follow> {
-    const { userId, followerId } = options;
-
-    const follow = new Follow();
-    follow.userId = userId;
-    follow.followerId = followerId;
-
-    const query = this.driver.save(follow);
-
-    const [error, result] = await useCatch(query);
-    if (error) throw new NotFoundException(error);
-
-    return result;
-  }
-
-  /** Update one Follow to the database. */
-  async updateOne(
-    selections: UpdateFollowSelections,
-    options: UpdateFollowOptions,
-  ): Promise<Follow> {
-    const { followId } = selections;
-    const { deletedAt } = options;
-
-    let findQuery = this.driver.createQueryBuilder('follow');
-
-    if (followId) {
-      findQuery = findQuery.where('follow.id = :id', { id: followId });
-    }
-
-    const [errorFind, follow] = await useCatch(findQuery.getOne());
-    if (errorFind) throw new NotFoundException(errorFind);
-
-    follow.deletedAt = deletedAt;
-
-    const query = this.driver.save(follow);
-
-    const [errorUp, result] = await useCatch(query);
-    if (errorUp) throw new NotFoundException(errorUp);
-
-    return result;
-  }
 }
