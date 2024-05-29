@@ -12,13 +12,10 @@ import {
 import { BaseDeleteEntity } from '../app/databases/common';
 import {
     Affiliation,
-    Cart,
     Comment,
     Contributor,
     Like,
     Membership,
-    Order,
-    OrderItem,
     Organization,
     Payment,
     Post,
@@ -85,12 +82,6 @@ export class User extends BaseDeleteEntity {
     @OneToMany(() => Product, (product) => product.user)
     products?: Product[];
 
-    @OneToMany(() => Order, (order) => order.user)
-    orders?: Order[];
-
-    @OneToMany(() => OrderItem, (orderItem) => orderItem.user)
-    orderItems?: OrderItem[];
-
     @OneToMany(() => Contributor, (contributor) => contributor.user, {
         onDelete: 'CASCADE',
     })
@@ -101,17 +92,13 @@ export class User extends BaseDeleteEntity {
     })
     likes?: Like[];
 
-    @OneToMany(() => Cart, (cart) => cart.user, {
-        onDelete: 'CASCADE',
-    })
-    carts?: Cart[];
-
     @Column({
         type: 'enum',
         enum: ['PROVIDER', 'DEFAULT'],
         default: 'DEFAULT',
     })
     provider?: 'PROVIDER' | 'DEFAULT';
+
     @OneToMany(() => Provider, (provider) => provider.user, {
         onDelete: 'CASCADE',
     })

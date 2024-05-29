@@ -114,6 +114,7 @@ export class PostsService {
           SELECT array_agg(jsonb_build_object(
             'name', "upl"."name",
             'path', "upl"."path",
+            'token', "upl"."token",
             'model', "upl"."model",
             'uploadType', "upl"."uploadType"
           )) 
@@ -131,6 +132,7 @@ export class PostsService {
           SELECT array_agg(jsonb_build_object(
             'name', "upl"."name",
             'path', "upl"."path",
+            'token', "upl"."token",
             'model', "upl"."model",
             'uploadType', "upl"."uploadType"
           )) 
@@ -324,6 +326,7 @@ export class PostsService {
           SELECT array_agg(jsonb_build_object(
             'name', "upl"."name",
             'path', "upl"."path",
+            'token', "upl"."token",
             'model', "upl"."model",
             'uploadType', "upl"."uploadType"
           )) 
@@ -341,6 +344,7 @@ export class PostsService {
           SELECT array_agg(jsonb_build_object(
             'name', "upl"."name",
             'path', "upl"."path",
+            'token', "upl"."token",
             'model', "upl"."model",
             'uploadType', "upl"."uploadType"
           )) 

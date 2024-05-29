@@ -13,11 +13,7 @@ import {
     Res,
     UseGuards,
 } from '@nestjs/common';
-import {
-    PaginationDto,
-    PaginationType,
-    addPagination,
-} from '../../app/utils/pagination';
+import { PaginationDto, addPagination } from '../../app/utils/pagination';
 import { reply } from '../../app/utils/reply';
 import { SearchQueryDto } from '../../app/utils/search-query';
 import { CartOrdersService } from '../cart-orders/cart-orders.service';
@@ -50,7 +46,7 @@ export class OrdersController {
         const { search } = searchQuery;
 
         const { take, page, sort } = paginationDto;
-        const pagination: PaginationType = addPagination({ page, take, sort });
+        const pagination = addPagination({ page, take, sort });
 
         const orders = await this.ordersService.findAll({
             organizationBuyerId: user?.organizationId,
@@ -76,7 +72,7 @@ export class OrdersController {
         const { search } = searchQuery;
 
         const { take, page, sort } = PaginationDto;
-        const pagination: PaginationType = addPagination({ page, take, sort });
+        const pagination = addPagination({ page, take, sort });
 
         const orderItems = await this.orderItemsService.findAll({
             search,
@@ -125,7 +121,6 @@ export class OrdersController {
 
         const findOneCartOrder = await this.cartOrdersService.findOneBy({
             cartOrderId,
-            //userId: '53019e77-de96-4ac7-9464-da32a9a37d4b',
         });
         if (!findOneCartOrder) {
             throw new HttpException(
@@ -136,10 +131,10 @@ export class OrdersController {
 
         const carts = await this.cartsService.findAll({
             status: 'ADDED',
-            userId: findOneCartOrder?.userId,
+            organizationBuyerId: findOneCartOrder?.organizationBuyerId,
             cartOrderId: findOneCartOrder?.id,
         });
-        if (!carts?.summary?.userId) {
+        if (!carts?.summary?.organizationBuyerId) {
             throw new HttpException(
                 `Carts dons't exist please try again`,
                 HttpStatus.NOT_FOUND
@@ -147,7 +142,7 @@ export class OrdersController {
         }
 
         const order = await this.ordersService.createOne({
-            userId: carts?.summary?.userId,
+            organizationBuyerId: carts?.summary?.organizationBuyerId,
             currency: carts?.summary?.currency,
             totalPriceDiscount: carts?.summary?.totalPriceDiscount,
             totalPriceNoDiscount: carts?.summary?.totalPriceNoDiscount,
@@ -161,7 +156,6 @@ export class OrdersController {
                 false;
             }
             const orderItemCreate = await this.orderItemsService.createOne({
-                userId: order?.userId,
                 currency: order?.currency,
                 quantity: Number(cart?.quantity),
                 percentDiscount: cart?.product?.discount?.percent,

@@ -201,7 +201,7 @@ export class OrderItemsService {
     /** Create on to the database. */
     async createOne(options: CreateOrderItemOptions): Promise<OrderItem> {
         const {
-            userId,
+            affiliationId,
             currency,
             quantity,
             percentDiscount,
@@ -219,7 +219,7 @@ export class OrderItemsService {
         } = options;
 
         const orderItem = new OrderItem();
-        orderItem.userId = userId;
+        orderItem.affiliationId = affiliationId;
         orderItem.currency = currency;
         orderItem.quantity = quantity;
         orderItem.percentDiscount = percentDiscount;

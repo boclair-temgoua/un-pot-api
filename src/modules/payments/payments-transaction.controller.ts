@@ -1,16 +1,16 @@
 import {
     Body,
     Controller,
-    Get,
+    Headers,
     HttpException,
     HttpStatus,
     Post,
-    Query,
     Res,
 } from '@nestjs/common';
 import { reply } from '../../app/utils/reply';
 import { CommentsService } from '../comments/comments.service';
 import { MembershipsService } from '../memberships/memberships.service';
+import { OrderItemsService } from '../order-items/order-items.service';
 import { OrdersUtil } from '../orders/orders.util';
 import { ProductsService } from '../products/products.service';
 import { SubscribesUtil } from '../subscribes/subscribes.util';
@@ -18,11 +18,8 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { TransactionsUtil } from '../transactions/transactions.util';
 import { UsersService } from '../users/users.service';
 import { WalletsService } from '../wallets/wallets.service';
-import {
-    CreateClientSecretStripeDto,
-    CreateSubscribePaymentsDto,
-} from './payments.dto';
-import { PaymentsUtil, stripePrivate } from './payments.util';
+import { CreateSubscribePaymentsDto } from './payments.dto';
+import { PaymentsUtil } from './payments.util';
 
 @Controller('payments')
 export class PaymentsTransactionController {
@@ -35,41 +32,43 @@ export class PaymentsTransactionController {
         private readonly usersService: UsersService,
         private readonly commentsService: CommentsService,
         private readonly ordersUtil: OrdersUtil,
+        private readonly orderItemsService: OrderItemsService,
         private readonly membershipsService: MembershipsService,
         private readonly transactionsService: TransactionsService
     ) {}
 
     /** Get subscribe */
-    @Get(`/stripe/client-secret`)
-    async createOneClientSecretStripe(
-        @Res() res,
-        @Query() query: CreateClientSecretStripeDto
-    ) {
-        const { amount, currency, reference } = query;
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: currency,
-                value: amount,
-            });
+    // @Get(`/stripe/client-secret`)
+    // async createOneClientSecretStripe(
+    //     @Res() res,
+    //     @Query() query: CreateClientSecretStripeDto
+    // ) {
+    //     const { amount, currency, reference } = query;
+    //     const { value: amountValueConvert } =
+    //         await this.transactionsUtil.convertedValue({
+    //             currency: currency,
+    //             value: amount,
+    //         });
 
-        const paymentIntent = await stripePrivate.paymentIntents.create({
-            amount: amountValueConvert * 100,
-            currency: 'USD',
-            metadata: { reference },
-        });
-        if (!paymentIntent.client_secret) {
-            throw new HttpException(
-                `Stripe failed to create payment intent`,
-                HttpStatus.NOT_FOUND
-            );
-        }
+    //     const paymentIntent = await stripePrivate.paymentIntents.create({
+    //         amount: amountValueConvert * 100,
+    //         currency: 'USD',
+    //         metadata: { reference },
+    //     });
+    //     if (!paymentIntent.client_secret) {
+    //         throw new HttpException(
+    //             `Stripe failed to create payment intent`,
+    //             HttpStatus.NOT_FOUND
+    //         );
+    //     }
 
-        return reply({ res, results: paymentIntent });
-    }
+    //     return reply({ res, results: paymentIntent });
+    // }
     /** Create subscribe */
     @Post(`/paypal/subscribe`)
     async createOnePaypalSubscribe(
         @Res() res,
+        @Headers('origin') origin: string,
         @Body() body: CreateSubscribePaymentsDto
     ) {
         const {
@@ -92,11 +91,15 @@ export class PaymentsTransactionController {
             );
         }
 
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: amount?.currency,
-                value: amount?.value,
-            });
+        const {
+            taxes,
+            value: amountValueConvert,
+            valueAfterExecuteTaxes,
+        } = await this.transactionsUtil.convertedValue({
+            taxes: amount?.taxes,
+            value: amount?.value,
+            currency: amount?.currency,
+        });
 
         const { transaction } =
             await this.subscribesUtil.createOrUpdateOneSubscribe({
@@ -104,6 +107,7 @@ export class PaymentsTransactionController {
                 organizationBuyerId,
                 organizationSellerId,
                 amount: {
+                    taxes,
                     currency: amount?.currency.toUpperCase(),
                     value: amount?.value * 100,
                     month: amount?.month,
@@ -130,6 +134,7 @@ export class PaymentsTransactionController {
     @Post(`/stripe/subscribe`)
     async createOneStripeSubscribe(
         @Res() res,
+        @Headers('origin') origin: string,
         @Body() body: CreateSubscribePaymentsDto
     ) {
         const {
@@ -159,6 +164,7 @@ export class PaymentsTransactionController {
             amount,
             reference,
             card,
+            urlOrigin: origin,
             membershipId,
         });
 
@@ -169,15 +175,20 @@ export class PaymentsTransactionController {
     @Post(`/paypal/donation`)
     async createOnePaypalDonation(
         @Res() res,
+        @Headers('origin') origin: string,
         @Body() body: CreateSubscribePaymentsDto
     ) {
         const { amount, organizationSellerId, reference } = body;
 
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: amount?.currency,
-                value: amount?.value,
-            });
+        const {
+            taxes,
+            value: amountValueConvert,
+            valueAfterExecuteTaxes,
+        } = await this.transactionsUtil.convertedValue({
+            taxes: amount?.taxes,
+            value: amount?.value,
+            currency: amount?.currency,
+        });
 
         const transaction = await this.transactionsService.createOne({
             amount: amount?.value * 100,
@@ -214,6 +225,7 @@ export class PaymentsTransactionController {
     @Post(`/stripe/donation`)
     async createOneStripeDonation(
         @Res() res,
+        @Headers('origin') origin: string,
         @Body() body: CreateSubscribePaymentsDto
     ) {
         const {
@@ -224,11 +236,15 @@ export class PaymentsTransactionController {
             card,
         } = body;
 
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: amount?.currency,
-                value: amount?.value,
-            });
+        const {
+            taxes,
+            value: amountValueConvert,
+            valueAfterExecuteTaxes,
+        } = await this.transactionsUtil.convertedValue({
+            taxes: amount?.taxes,
+            value: amount?.value,
+            currency: amount?.currency,
+        });
 
         const { paymentIntents } = await this.paymentsUtil.stripeMethod({
             card,
@@ -236,6 +252,7 @@ export class PaymentsTransactionController {
             amountDetail: amount,
             token: reference,
             organizationBuyerId,
+            urlOrigin: origin,
             description: amount?.description || 'bought un pot',
         });
         if (!paymentIntents) {
@@ -288,6 +305,7 @@ export class PaymentsTransactionController {
         const {
             amount,
             organizationSellerId,
+            organizationBuyerId,
             reference,
             cartOrderId,
             userAddress,
@@ -302,15 +320,17 @@ export class PaymentsTransactionController {
             );
         }
 
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: amount?.currency,
-                value: amount?.value,
-            });
-
+        const {
+            taxes,
+            value: amountValueConvert,
+            valueAfterExecuteTaxes,
+        } = await this.transactionsUtil.convertedValue({
+            taxes: amount?.taxes,
+            value: amount?.value,
+            currency: amount?.currency,
+        });
         const { order } = await this.ordersUtil.orderShopCreate({
-            organizationBuyerId: findOneUser?.organizationId,
-            userBuyerId: '',
+            organizationBuyerId,
             cartOrderId,
             organizationSellerId,
             userAddress,
@@ -343,75 +363,161 @@ export class PaymentsTransactionController {
     @Post(`/stripe/shop`)
     async createOneStripeShop(
         @Res() res,
+        @Headers('origin') origin: string,
         @Body() body: CreateSubscribePaymentsDto
     ) {
         const {
+            affiliation,
             amount,
             organizationSellerId,
+            organizationBuyerId,
             reference,
             cartOrderId,
+            productId,
             card,
             userAddress,
         } = body;
-        const findOneUser = await this.usersService.findOneBy({
-            userId: '',
-        });
-        if (!findOneUser) {
-            throw new HttpException(
-                `This user dons't exist please change`,
-                HttpStatus.NOT_FOUND
-            );
-        }
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: amount?.currency,
-                value: amount?.value,
-            });
 
-        const { paymentIntents } = await this.paymentsUtil.stripeMethod({
-            card,
-            currency: amount?.currency.toUpperCase(),
-            amountDetail: amount,
-            token: reference,
-            organizationBuyerId: findOneUser?.organizationId,
-            description: `Product shop userId: ${findOneUser?.id}`,
+        const findOneProduct = await this.productsService.findOneBy({
+            productId: productId,
+            organizationId: organizationSellerId,
         });
-        if (!paymentIntents) {
+        if (!findOneProduct) {
             throw new HttpException(
-                `Transaction not found please try again`,
+                `This product ${productId} dons't exist please change`,
                 HttpStatus.NOT_FOUND
             );
         }
 
-        if (paymentIntents) {
-            const { order } = await this.ordersUtil.orderShopCreate({
-                organizationBuyerId: findOneUser?.organizationId,
-                userBuyerId: '',
-                cartOrderId,
-                organizationSellerId,
-                userAddress,
-            });
-            const transaction = await this.transactionsService.createOne({
-                amount: Number(paymentIntents?.amount_received),
-                currency: paymentIntents?.currency.toUpperCase(),
-                organizationSellerId,
-                orderId: order?.id,
-                type: 'CARD',
-                token: reference,
-                model: 'PRODUCT',
-                email: findOneUser?.email,
-                fullName: `${findOneUser?.profile?.firstName} ${findOneUser?.profile?.lastName}`,
-                description: `Product shop userId: ${findOneUser?.id}`,
-                amountConvert: amountValueConvert * 100,
-            });
+        const {
+            taxes,
+            value: amountConvert,
+            valueAfterExecuteTaxes: amountValueConvertAfterExecuteTaxes,
+        } = await this.transactionsUtil.convertedValue({
+            taxes: amount?.taxes,
+            value: amount?.value,
+            currency: amount?.currency,
+        });
 
-            if (transaction?.token) {
-                await this.walletsService.incrementOne({
-                    amount: transaction?.amountConvert,
-                    organizationId: transaction?.organizationSellerId,
-                });
-            }
-        }
+        const { order, transaction } = await this.ordersUtil.orderEventCreate({
+            taxes,
+            amount,
+            reference,
+            type: 'CARD',
+            userAddress,
+            affiliation,
+            organizationBuyerId,
+            organizationSellerId,
+            model: findOneProduct?.model,
+            productId: findOneProduct?.id,
+            amountConvert: amountConvert,
+            description: 'description test',
+            currency: amount?.currency?.toUpperCase(),
+            amountConvertAfterExecuteTaxes: amountValueConvertAfterExecuteTaxes,
+        });
+
+        await this.paymentsUtil.createOrderItemMethod({
+            order,
+            amount,
+            transaction,
+            userAddress,
+            urlOrigin: origin,
+            product: findOneProduct,
+        });
+
+        // await this.orderItemsService.createOne({
+        //     // orderId: order?.id,
+        //     // status: 'DELIVERED',
+        //     // organizationBuyerId,
+        //     // model: transaction.model,
+        //     // currency: order?.currency,
+        //     // quantity: amount?.quantity,
+        //     // price: Number(amount?.value),
+        //     // productId: findOneProduct?.id,
+        //     // organizationSellerId: findOneProduct?.organizationId,
+        //     // uploadsImages: findOneProduct?.uploadsImages,
+        //     // uploadsFiles: findOneProduct?.uploadsFiles,
+
+        //     model: 'PRODUCT',
+        //     productId: findOneProduct?.id,
+        //     quantity: amount.quantity,
+        //     currency: order?.currency,
+        //     orderId: order?.id,
+        //     status: 'ACCEPTED',
+        //     affiliationId: transaction.affiliationId,
+        //     price: oneValue * 100,
+        //     priceDiscount: oneValue * 100,
+        //     expiredAt: product?.expiredAt,
+        //     organizationBuyerId: order?.organizationBuyerId,
+        //     organizationSellerId: order?.organizationSellerId,
+        //     uploadsImages: uploadsImages,
+        // });
+
+        // if (transaction?.token) {
+        //     await this.walletsService.incrementOne({
+        //         amount: transaction?.amountConvertInTaxes,
+        //         organizationId: transaction?.organizationSellerId,
+        //     });
+        // }
+
+        // const { paymentIntents } = await this.paymentsUtil.stripeMethod({
+        //     card,
+        //     currency: amount?.currency.toUpperCase(),
+        //     amountDetail: amount,
+        //     token: reference,
+        //     urlOrigin: origin,
+        //     organizationBuyerId: organizationBuyerId,
+        //     description: `Product shop organizationId ${organizationBuyerId}`,
+        // });
+        // if (!paymentIntents) {
+        //     throw new HttpException(
+        //         `Transaction not found please try again`,
+        //         HttpStatus.NOT_FOUND
+        //     );
+        // }
+
+        // if (paymentIntents) {
+        //     const { order, transaction } =
+        //         await this.ordersUtil.orderEventCreate({
+        //             taxes,
+        //             amount,
+        //             reference,
+        //             type: 'CARD',
+        //             userAddress,
+        //             model: 'PRODUCT',
+        //             affiliation,
+        //             organizationBuyerId,
+        //             organizationSellerId,
+        //             productId: findOneProduct?.id,
+        //             amountConvert: amountConvert,
+        //             description: paymentIntents?.description,
+        //             currency: amount?.currency?.toUpperCase(),
+        //             amountConvertAfterExecuteTaxes:
+        //                 amountValueConvertAfterExecuteTaxes,
+        //         });
+
+        //     await this.orderItemsService.createOne({
+        //         userId: order?.userId,
+        //         currency: order?.currency,
+        //         quantity: amount?.quantity,
+        //         price: Number(amount?.value),
+        //         organizationBuyerId: organizationBuyerId,
+        //         organizationSellerId: organizationSellerId,
+        //         model: transaction.model,
+        //         productId: productId,
+        //         orderId: order?.id,
+        //         status: 'DELIVERED',
+        //         uploadsImages: [...findOneProduct?.uploadsImages],
+        //         uploadsFiles: [...findOneProduct?.uploadsFiles],
+        //     });
+
+        //     if (transaction?.token) {
+        //         await this.walletsService.incrementOne({
+        //             amount: transaction?.amountConvertInTaxes,
+        //             organizationId: transaction?.organizationSellerId,
+        //         });
+        //     }
+        // }
 
         return reply({ res, results: reference });
     }
@@ -420,6 +526,7 @@ export class PaymentsTransactionController {
     @Post(`/stripe/commission`)
     async createOneCommission(
         @Res() res,
+        @Headers('origin') origin: string,
         @Body() body: CreateSubscribePaymentsDto
     ) {
         const {
@@ -443,11 +550,15 @@ export class PaymentsTransactionController {
             );
         }
 
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: amount?.currency,
-                value: amount?.value,
-            });
+        const {
+            taxes,
+            value: amountValueConvert,
+            valueAfterExecuteTaxes,
+        } = await this.transactionsUtil.convertedValue({
+            taxes: amount?.taxes,
+            value: amount?.value,
+            currency: amount?.currency,
+        });
 
         const { paymentIntents } = await this.paymentsUtil.stripeMethod({
             card,
@@ -455,6 +566,7 @@ export class PaymentsTransactionController {
             amountDetail: amount,
             token: reference,
             organizationBuyerId,
+            urlOrigin: origin,
             description: `Commission ${findOneProduct?.title}`,
         });
         if (!paymentIntents) {
@@ -524,11 +636,15 @@ export class PaymentsTransactionController {
             );
         }
 
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: amount?.currency,
-                value: amount?.value,
-            });
+        const {
+            taxes,
+            value: amountValueConvert,
+            valueAfterExecuteTaxes,
+        } = await this.transactionsUtil.convertedValue({
+            taxes: amount?.taxes,
+            value: amount?.value,
+            currency: amount?.currency,
+        });
 
         const { order } =
             await this.ordersUtil.orderCommissionOrMembershipCreate({

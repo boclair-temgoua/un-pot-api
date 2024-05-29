@@ -39,6 +39,7 @@ export class OrdersService {
             .addSelect('order.userId', 'userId')
             .addSelect('order.currency', 'currency')
             .addSelect('order.address', 'address')
+            .addSelect('order.country', 'country')
             .addSelect('order.orderNumber', 'orderNumber')
             .addSelect('order.totalPriceDiscount', 'totalPriceDiscount')
             .addSelect('order.totalPriceNoDiscount', 'totalPriceNoDiscount')
@@ -133,9 +134,9 @@ export class OrdersService {
     /** Create on to the database. */
     async createOne(options: CreateOrderOptions): Promise<Order> {
         const {
-            userId,
             currency,
             address,
+            country,
             totalPriceDiscount,
             totalPriceNoDiscount,
             organizationBuyerId,
@@ -143,7 +144,7 @@ export class OrdersService {
         } = options;
 
         const order = new Order();
-        order.userId = userId;
+        order.country = country;
         order.currency = currency;
         order.address = address;
         order.organizationSellerId = organizationSellerId;

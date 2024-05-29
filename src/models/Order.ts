@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 
 import { BaseDeleteEntity } from '../app/databases/common';
-import { OrderItem, Organization, Transaction, User } from './index';
+import { OrderItem, Organization, Transaction } from './index';
 
 @Entity('order')
 export class Order extends BaseDeleteEntity {
@@ -18,6 +18,9 @@ export class Order extends BaseDeleteEntity {
 
     @Column({ nullable: true })
     orderNumber: string;
+
+    @Column({ nullable: true })
+    country: string;
 
     @Column({ type: 'float', nullable: true })
     totalPriceDiscount: number;
@@ -30,12 +33,6 @@ export class Order extends BaseDeleteEntity {
 
     @Column({ type: 'jsonb', array: false, nullable: true })
     address?: {};
-
-    @Column({ type: 'uuid', nullable: true })
-    userId?: string;
-    @ManyToOne(() => User, (user) => user.orders, { onDelete: 'CASCADE' })
-    @JoinColumn()
-    user?: User;
 
     @OneToOne(() => Transaction, (transaction) => transaction.order, {
         onDelete: 'CASCADE',

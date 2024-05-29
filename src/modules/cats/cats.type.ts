@@ -3,86 +3,86 @@ import { Cart } from '../../models/Cart';
 import { StatusCart } from './cats.dto';
 
 type OnCart = {
-  createdAt: Date;
-  id: string;
-  quantity: string;
-  model: FilterQueryType;
-  productId: string;
-  userId: string;
-  organizationSellerId: string;
-  profileVendor: {
-    color: string;
-    image: string;
-    userId: string;
-    fullName: string;
-    lastName: string;
-    username: string;
-    firstName: string;
-  };
-  uploadsImages: [
-    {
-      name: string;
-      path: string;
-      model: string;
-      uploadType: string;
-    },
-  ];
-  uploadsFiles: null;
-  product: {
+    createdAt: Date;
     id: string;
-    slug: string;
-    price: number;
-    title: string;
-    currency: {
-      code: string;
-      name: string;
-      symbol: string;
+    quantity: string;
+    model: FilterQueryType;
+    productId: string;
+    userId: string;
+    organizationSellerId: string;
+    profileVendor: {
+        color: string;
+        image: string;
+        userId: string;
+        fullName: string;
+        lastName: string;
+        username: string;
+        firstName: string;
     };
-    discount: {
-      isValid: boolean;
-      percent: number;
-      expiredAt: Date;
-      enableExpiredAt: boolean;
+    uploadsImages: [
+        {
+            name: string;
+            path: string;
+            model: string;
+            uploadType: string;
+        },
+    ];
+    uploadsFiles: null;
+    product: {
+        id: string;
+        slug: string;
+        price: number;
+        title: string;
+        currency: {
+            code: string;
+            name: string;
+            symbol: string;
+        };
+        discount: {
+            isValid: boolean;
+            percent: number;
+            expiredAt: Date;
+            enableExpiredAt: boolean;
+        };
+        productType: string;
+        priceDiscount: number;
+        organizationId: string;
     };
-    productType: string;
-    priceDiscount: number;
-    organizationId: string;
-  };
 };
 
 export type CartResponse = {
-  summary: {
-    totalQuantity: number;
-    totalPriceDiscount: number;
-    totalPriceNoDiscount: number;
-    currency: string;
-    userId: string;
-  };
-  cartItems: OnCart[];
+    summary: {
+        totalQuantity: number;
+        totalPriceDiscount: number;
+        totalPriceNoDiscount: number;
+        currency: string;
+        organizationBuyerId: string;
+    };
+    cartItems: OnCart[];
 };
 
 export type GetCartsSelections = {
-  userId?: Cart['userId'];
-  status: StatusCart;
-  productId?: Cart['productId'];
-  cartOrderId?: Cart['cartOrderId'];
-  ipLocation?: Cart['ipLocation'];
-  currency?: Cart['currency'];
-  organizationSellerId?: Cart['organizationSellerId'];
+    status: StatusCart;
+    productId?: Cart['productId'];
+    cartOrderId?: Cart['cartOrderId'];
+    ipLocation?: Cart['ipLocation'];
+    currency?: Cart['currency'];
+    organizationBuyerId?: Cart['organizationBuyerId'];
+    organizationSellerId?: Cart['organizationSellerId'];
 };
 
 export type GetOneCartsSelections = {
-  cartId?: Cart['id'];
-  userId?: Cart['userId'];
-  productId?: Cart['productId'];
-  status?: StatusCart;
-  currency?: Cart['currency'];
-  cartOrderId?: Cart['cartOrderId'];
-  organizationSellerId?: Cart['organizationSellerId'];
+    cartId?: Cart['id'];
+    productId?: Cart['productId'];
+    status?: StatusCart;
+    currency?: Cart['currency'];
+    cartOrderId?: Cart['cartOrderId'];
+    organizationBuyerId?: Cart['organizationBuyerId'];
+    organizationSellerId?: Cart['organizationSellerId'];
 };
 
 export type UpdateCartsSelections = {
-  cartId: Cart['id'];
+    cartId: Cart['id'];
 };
 
 export type CreateCartsOptions = Partial<Cart>;

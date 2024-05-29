@@ -1,6 +1,8 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import Stripe from 'stripe';
 import { config } from '../../app/config/index';
+import { Order, Transaction, UserAddress } from '../../models';
+import { OrderItemsService } from '../order-items/order-items.service';
 import { SubscribesUtil } from '../subscribes/subscribes.util';
 import { TransactionsUtil } from '../transactions/transactions.util';
 import { WalletsService } from '../wallets/wallets.service';
@@ -24,6 +26,7 @@ export class PaymentsUtil {
         private readonly paymentsService: PaymentsService,
         private readonly subscribesUtil: SubscribesUtil,
         private readonly walletsService: WalletsService,
+        private readonly orderItemsService: OrderItemsService,
         private readonly transactionsUtil: TransactionsUtil
     ) {}
 
@@ -76,6 +79,7 @@ export class PaymentsUtil {
         currency: string;
         card: CardModel;
         organizationBuyerId: string;
+        urlOrigin: string;
     }): Promise<any> {
         const {
             token,
@@ -84,6 +88,7 @@ export class PaymentsUtil {
             amountDetail,
             currency,
             card,
+            urlOrigin,
         } = options;
         const {
             cardNumber,
@@ -112,7 +117,7 @@ export class PaymentsUtil {
             payment_method_types: [paymentMethod?.type],
             confirm: true,
             confirmation_method: 'manual', // For 3D Security
-            return_url: `${config.url.client}/success?token=${token}`,
+            return_url: `${urlOrigin}/transactions/success?token=${token}`,
         });
         if (!paymentIntents) {
             throw new HttpException(
@@ -145,7 +150,7 @@ export class PaymentsUtil {
             });
         }
 
-        return { paymentIntents };
+        return { paymentIntents: '' };
     }
 
     /** Stripe billing */
@@ -155,10 +160,12 @@ export class PaymentsUtil {
         card: CardModel;
         membershipId: string;
         userAddress: any;
+        urlOrigin: string;
         organizationBuyerId: string;
         organizationSellerId: string;
     }): Promise<any> {
         const {
+            urlOrigin,
             amount,
             reference,
             card,
@@ -168,13 +175,18 @@ export class PaymentsUtil {
             organizationSellerId,
         } = options;
 
-        const { value: amountValueConvert } =
-            await this.transactionsUtil.convertedValue({
-                currency: amount?.currency,
-                value: amount?.value,
-            });
+        const {
+            taxes,
+            value: amountValueConvert,
+            valueAfterExecuteTaxes,
+        } = await this.transactionsUtil.convertedValue({
+            taxes: amount?.taxes,
+            value: amount?.value,
+            currency: amount?.currency,
+        });
 
         const { paymentIntents } = await this.stripeMethod({
+            urlOrigin,
             card,
             currency: amount?.currency.toUpperCase(),
             amountDetail: amount,
@@ -197,6 +209,7 @@ export class PaymentsUtil {
                     organizationBuyerId,
                     organizationSellerId,
                     amount: {
+                        taxes,
                         currency: paymentIntents?.currency.toUpperCase(),
                         value: amount?.value * 100,
                         month: amount?.month,
@@ -218,5 +231,35 @@ export class PaymentsUtil {
         }
 
         return { paymentIntents };
+    }
+
+    /** Create OrderItem and generate pdf */
+    async createOrderItemMethod(options: {
+        amount: AmountModel;
+        order: Order;
+        transaction: Transaction;
+        product: any;
+        urlOrigin: string;
+        userAddress: UserAddress;
+    }): Promise<any> {
+        const { amount, order, transaction, product, userAddress } = options;
+
+        await this.orderItemsService.createOne({
+            model: product?.model,
+            status: 'ACCEPTED',
+            quantity: 1,
+            orderId: order?.id,
+            productId: product?.id,
+            currency: order?.currency,
+            affiliationId: transaction.affiliationId,
+            price: Number(amount?.oneValue) * 100,
+            priceDiscount: Number(amount?.oneValue) * 100,
+            organizationBuyerId: order?.organizationBuyerId,
+            organizationSellerId: order?.organizationSellerId,
+            uploadsImages: product.uploadsImages,
+            uploadsFiles: product.uploadsFiles,
+        });
+
+        return 'ok';
     }
 }

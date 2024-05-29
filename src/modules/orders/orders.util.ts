@@ -1,11 +1,14 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { FilterQueryType } from '../../app/utils/search-query';
+import { UserAddress } from '../../models';
 import { CartOrdersService } from '../cart-orders/cart-orders.service';
 import { CartsService } from '../cats/cats.service';
 import { MembershipsService } from '../memberships/memberships.service';
 import { OrderItemsService } from '../order-items/order-items.service';
 import { ProductsService } from '../products/products.service';
-import { AmountModel } from '../wallets/wallets.type';
+import { TransactionsService } from '../transactions/transactions.service';
+import { TransactionType } from '../transactions/transactions.type';
+import { AffiliationModel, AmountModel } from '../wallets/wallets.type';
 import { OrdersService } from './orders.service';
 
 @Injectable()
@@ -15,13 +18,13 @@ export class OrdersUtil {
         private readonly cartsService: CartsService,
         private readonly membershipsService: MembershipsService,
         private readonly productsService: ProductsService,
+        private readonly transactionsService: TransactionsService,
         private readonly cartOrdersService: CartOrdersService,
         private readonly orderItemsService: OrderItemsService
     ) {}
 
     /** Create shop */
     async orderShopCreate(options: {
-        userBuyerId: string;
         cartOrderId: string;
         organizationBuyerId: string;
         organizationSellerId: string;
@@ -29,7 +32,6 @@ export class OrdersUtil {
     }): Promise<any> {
         const {
             userAddress,
-            userBuyerId,
             organizationBuyerId,
             organizationSellerId,
             cartOrderId,
@@ -37,7 +39,7 @@ export class OrdersUtil {
 
         const findOneCartOrder = await this.cartOrdersService.findOneBy({
             cartOrderId,
-            userId: userBuyerId,
+            organizationBuyerId,
             organizationSellerId,
         });
         if (!findOneCartOrder) {
@@ -49,10 +51,11 @@ export class OrdersUtil {
 
         const carts = await this.cartsService.findAll({
             status: 'ADDED',
-            userId: findOneCartOrder?.userId,
+            organizationSellerId,
+            organizationBuyerId,
             cartOrderId: findOneCartOrder?.id,
         });
-        if (!carts?.summary?.userId) {
+        if (!carts?.summary?.organizationBuyerId) {
             throw new HttpException(
                 `Carts dons't exist please try again`,
                 HttpStatus.NOT_FOUND
@@ -61,7 +64,7 @@ export class OrdersUtil {
 
         const order = await this.ordersService.createOne({
             address: userAddress,
-            userId: carts?.summary?.userId,
+            organizationBuyerId: carts?.summary?.organizationBuyerId,
             currency: carts?.summary?.currency,
             totalPriceDiscount:
                 Number(carts?.summary?.totalPriceDiscount) * 100,
@@ -78,7 +81,6 @@ export class OrdersUtil {
             }
 
             const orderItemCreate = await this.orderItemsService.createOne({
-                userId: order?.userId,
                 currency: order?.currency,
                 quantity: Number(cart?.quantity),
                 percentDiscount: cart?.product?.discount?.percent,
@@ -158,7 +160,6 @@ export class OrdersUtil {
             totalPriceNoDiscount: Number(amount?.value),
         });
         const orderItem = await this.orderItemsService.createOne({
-            userId: order?.userId,
             currency: order?.currency,
             quantity: 1,
             price: Number(amount?.value),
@@ -175,5 +176,72 @@ export class OrdersUtil {
         });
 
         return { order, orderItem };
+    }
+
+    /** Create event */
+    async orderEventCreate(options: {
+        model: FilterQueryType;
+        amount: AmountModel;
+        affiliation: AffiliationModel;
+        productId?: string;
+        reference: string;
+        description: string;
+        taxes: number;
+        amountConvert: number;
+        amountConvertAfterExecuteTaxes: number;
+        organizationBuyerId: string;
+        organizationSellerId: string;
+        currency: string;
+        userAddress?: UserAddress;
+        type: TransactionType;
+    }): Promise<any> {
+        const {
+            taxes,
+            type,
+            model,
+            amount,
+            reference,
+            userAddress,
+            description,
+            currency,
+            amountConvert,
+            affiliation,
+            organizationBuyerId,
+            organizationSellerId,
+            amountConvertAfterExecuteTaxes,
+        } = options;
+
+        const amountNonConvertAfterTaxes =
+            Number(amount?.value) - Number(amount?.value * taxes) / 100;
+
+        const order = await this.ordersService.createOne({
+            country: amount?.country,
+            organizationBuyerId,
+            organizationSellerId,
+            address: userAddress,
+            currency: amount?.currency,
+            totalPriceDiscount: Number(amount?.value) * 100,
+            totalPriceNoDiscount: Number(amount?.value) * 100,
+        });
+
+        const transaction = await this.transactionsService.createOne({
+            type,
+            model: model,
+            token: reference,
+            orderId: order?.id,
+            organizationBuyerId,
+            organizationSellerId,
+            description,
+            affiliationId: affiliation?.id,
+            fullName: `${userAddress?.firstName} ${userAddress?.lastName}`,
+            amountConvert: amountConvert * 100,
+            amount: amount?.value * 100,
+            amountInTaxes: amountNonConvertAfterTaxes * 100,
+            amountConvertInTaxes: amountConvertAfterExecuteTaxes * 100,
+            taxes: taxes,
+            currency,
+        });
+
+        return { order, transaction: '' };
     }
 }

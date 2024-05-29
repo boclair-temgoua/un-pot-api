@@ -14,7 +14,11 @@ import {
     TransactionType,
     transactionTypeArrays,
 } from '../transactions/transactions.type';
-import { AmountModel, CardModel } from '../wallets/wallets.type';
+import {
+    AffiliationModel,
+    AmountModel,
+    CardModel,
+} from '../wallets/wallets.type';
 
 export type StatusPayment = 'ACTIVE' | 'PENDING' | 'INVALID';
 
@@ -113,6 +117,9 @@ export class CreateSubscribePaymentsDto {
 
     @IsOptional()
     card: CardModel;
+
+    @IsOptional()
+    affiliation: AffiliationModel;
 
     @IsOptional()
     amount: AmountModel;

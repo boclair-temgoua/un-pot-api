@@ -1,55 +1,52 @@
 import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  Relation,
+    Column,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    PrimaryGeneratedColumn,
+    Relation,
 } from 'typeorm';
 import { StatusCart } from './../modules/cats/cats.dto';
 
 import { BaseDeleteEntity } from '../app/databases/common';
 import {
-  FilterQueryType,
-  filterQueryTypeArrays,
+    FilterQueryType,
+    filterQueryTypeArrays,
 } from '../app/utils/search-query';
-import { Product, User } from './index';
+import { Product } from './index';
 
 @Entity('cart')
 export class Cart extends BaseDeleteEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id?: string;
+    @PrimaryGeneratedColumn('uuid')
+    id?: string;
 
-  @Column({ default: 'ADDED' })
-  status?: StatusCart;
+    @Column({ default: 'ADDED' })
+    status?: StatusCart;
 
-  @Column({ type: 'bigint', nullable: true })
-  quantity: number;
+    @Column({ type: 'bigint', nullable: true })
+    quantity: number;
 
-  @Column({ nullable: true })
-  currency: string;
+    @Column({ nullable: true })
+    currency: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  cartOrderId?: string;
+    @Column({ type: 'uuid', nullable: true })
+    cartOrderId?: string;
 
-  @Column({ type: 'enum', enum: filterQueryTypeArrays, default: 'PRODUCT' })
-  model?: FilterQueryType;
+    @Column({ type: 'enum', enum: filterQueryTypeArrays, default: 'PRODUCT' })
+    model?: FilterQueryType;
 
-  @Column({ type: 'uuid', nullable: true })
-  productId?: string;
-  @ManyToOne(() => Product, (product) => product.carts)
-  @JoinColumn()
-  product?: Relation<Product>;
+    @Column({ type: 'uuid', nullable: true })
+    productId?: string;
+    @ManyToOne(() => Product, (product) => product.carts)
+    @JoinColumn()
+    product?: Relation<Product>;
 
-  @Column({ type: 'uuid', nullable: true })
-  userId?: string;
-  @ManyToOne(() => User, (user) => user.carts, { onDelete: 'CASCADE' })
-  @JoinColumn()
-  user?: User;
+    @Column({ nullable: true })
+    ipLocation?: string;
 
-  @Column({ nullable: true })
-  ipLocation?: string;
+    @Column({ type: 'uuid', nullable: true })
+    organizationBuyerId?: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  organizationSellerId?: string;
+    @Column({ type: 'uuid', nullable: true })
+    organizationSellerId?: string;
 }

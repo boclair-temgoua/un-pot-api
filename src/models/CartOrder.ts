@@ -1,34 +1,34 @@
 import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
+    Column,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    PrimaryGeneratedColumn,
 } from 'typeorm';
 
 import { BaseDeleteEntity } from '../app/databases/common';
 import {
-  FilterQueryType,
-  filterQueryTypeArrays,
+    FilterQueryType,
+    filterQueryTypeArrays,
 } from '../app/utils/search-query';
 import { Organization } from './Organization';
 
 @Entity('cart_order')
 export class CartOrder extends BaseDeleteEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id?: string;
+    @PrimaryGeneratedColumn('uuid')
+    id?: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  userId?: string;
+    @Column({ type: 'uuid', nullable: true })
+    organizationBuyerId?: string;
 
-  @Column({ type: 'enum', enum: filterQueryTypeArrays, default: 'PRODUCT' })
-  model?: FilterQueryType;
+    @Column({ type: 'enum', enum: filterQueryTypeArrays, default: 'PRODUCT' })
+    model?: FilterQueryType;
 
-  @Column({ type: 'uuid', nullable: true })
-  organizationSellerId?: string;
-  @ManyToOne(() => Organization, (organization) => organization.cartOrders, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn([{ name: 'organizationSellerId', referencedColumnName: 'id' }])
-  organization?: Organization;
+    @Column({ type: 'uuid', nullable: true })
+    organizationSellerId?: string;
+    @ManyToOne(() => Organization, (organization) => organization.cartOrders, {
+        onDelete: 'CASCADE',
+    })
+    @JoinColumn([{ name: 'organizationSellerId', referencedColumnName: 'id' }])
+    organization?: Organization;
 }

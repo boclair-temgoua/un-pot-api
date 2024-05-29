@@ -187,7 +187,7 @@ export class PostsController {
             uploadableId: post?.id,
             userId: post?.userId,
             organizationId: post?.organizationId,
-            folder: 'posts',
+            folder: 'post',
             files,
         });
 
@@ -240,7 +240,7 @@ export class PostsController {
             postId: post?.id,
             uploadableId: post?.id,
             userId: post?.userId,
-            folder: 'posts',
+            folder: 'post',
             files,
             organizationId: post?.organizationId,
         });
@@ -302,7 +302,7 @@ export class PostsController {
             postId: postId,
             uploadableId: postId,
             userId: findOnePost?.userId,
-            folder: 'posts',
+            folder: 'post',
             files,
             organizationId: findOnePost?.organizationId,
         });

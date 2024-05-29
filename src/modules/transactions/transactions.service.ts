@@ -54,6 +54,12 @@ export class TransactionsService {
             .addSelect('transaction.organizationBuyerId', 'organizationBuyerId')
             .addSelect('transaction.amountConvert', 'amountConvert')
             .addSelect('transaction.orderId', 'orderId')
+            .addSelect('transaction.taxes', 'taxes')
+            .addSelect('transaction.amountInTaxes', 'amountInTaxes')
+            .addSelect(
+                'transaction.amountConvertInTaxes',
+                'amountConvertInTaxes'
+            )
             .addSelect('transaction.createdAt', 'createdAt')
             .addSelect(
                 /*sql*/ `jsonb_build_object(
@@ -227,6 +233,9 @@ export class TransactionsService {
             orderId,
             fullName,
             email,
+            taxes,
+            amountInTaxes,
+            amountConvertInTaxes,
             organizationSellerId,
             organizationBuyerId,
         } = options;
@@ -239,6 +248,9 @@ export class TransactionsService {
         transaction.type = type;
         transaction.token = token;
         transaction.fullName = fullName;
+        transaction.taxes = taxes;
+        transaction.amountInTaxes = amountInTaxes;
+        transaction.amountConvertInTaxes = amountConvertInTaxes;
         transaction.email = email;
         transaction.orderId = orderId;
         transaction.color = getRandomElement(colorsArraysTransaction);

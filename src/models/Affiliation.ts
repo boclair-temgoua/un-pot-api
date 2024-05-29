@@ -3,12 +3,13 @@ import {
     Entity,
     JoinColumn,
     ManyToOne,
+    OneToMany,
     PrimaryGeneratedColumn,
     Relation,
 } from 'typeorm';
 import { BaseDeleteEntity } from '../app/databases/common';
 import { ProductStatus, productStatusArrays } from '../app/utils/pagination';
-import { Product, User } from './index';
+import { OrderItem, Product, Transaction, User } from './index';
 
 @Entity('affiliation')
 export class Affiliation extends BaseDeleteEntity {
@@ -49,6 +50,16 @@ export class Affiliation extends BaseDeleteEntity {
 
     @Column({ type: 'uuid', nullable: true })
     organizationReceivedId?: string;
+
+    @OneToMany(() => Transaction, (transaction) => transaction.affiliation, {
+        onDelete: 'CASCADE',
+    })
+    transactions?: Transaction[];
+
+    @OneToMany(() => OrderItem, (orderItem) => orderItem.affiliation, {
+        onDelete: 'CASCADE',
+    })
+    orderItems?: OrderItem[];
 
     @Column({ type: 'uuid', nullable: true })
     userReceivedId?: string;

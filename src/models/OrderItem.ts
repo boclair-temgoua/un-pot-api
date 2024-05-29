@@ -15,7 +15,7 @@ import {
     OrderItemStatus,
     orderItemStatusArrays,
 } from '../modules/order-items/order-items.type';
-import { Membership, Order, Organization, Product, User } from './index';
+import { Affiliation, Membership, Order, Organization, Product } from './index';
 
 @Entity('order_item')
 export class OrderItem extends BaseDeleteEntity {
@@ -77,10 +77,12 @@ export class OrderItem extends BaseDeleteEntity {
     order?: Order;
 
     @Column({ type: 'uuid', nullable: true })
-    userId?: string;
-    @ManyToOne(() => User, (user) => user.orderItems, { onDelete: 'CASCADE' })
+    affiliationId?: string;
+    @ManyToOne(() => Affiliation, (affiliation) => affiliation.orderItems, {
+        onDelete: 'CASCADE',
+    })
     @JoinColumn()
-    user?: User;
+    affiliation?: Affiliation;
 
     @Column({ type: 'uuid', nullable: true })
     organizationSellerId?: string;

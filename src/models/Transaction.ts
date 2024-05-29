@@ -14,7 +14,7 @@ import {
     TransactionType,
     transactionStatusArrays,
 } from '../modules/transactions/transactions.type';
-import { Order, Organization, Subscribe } from './index';
+import { Affiliation, Order, Organization, Subscribe } from './index';
 
 @Entity('transaction')
 export class Transaction extends BaseDeleteEntity {
@@ -26,6 +26,15 @@ export class Transaction extends BaseDeleteEntity {
 
     @Column({ type: 'float', nullable: true })
     amountConvert: number;
+
+    @Column({ type: 'float', nullable: true })
+    taxes: number;
+
+    @Column({ type: 'float', nullable: true })
+    amountInTaxes: number;
+
+    @Column({ type: 'float', nullable: true })
+    amountConvertInTaxes: number;
 
     @Column({ nullable: true })
     title: string;
@@ -72,6 +81,14 @@ export class Transaction extends BaseDeleteEntity {
     })
     @JoinColumn()
     order?: Relation<Order>;
+
+    @Column({ type: 'uuid', nullable: true })
+    affiliationId?: string;
+    @ManyToOne(() => Affiliation, (affiliation) => affiliation.transactions, {
+        onDelete: 'CASCADE',
+    })
+    @JoinColumn()
+    affiliation?: Affiliation;
 
     @Column({ type: 'uuid', nullable: true })
     organizationBuyerId?: string;
