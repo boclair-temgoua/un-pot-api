@@ -9,7 +9,7 @@ import { WalletsService } from '../wallets/wallets.service';
 import { AmountModel, CardModel } from '../wallets/wallets.type';
 import { PaymentsService } from './payments.service';
 
-const apiVersion = '2024-04-10';
+const apiVersion = '2024-06-20';
 export const stripePrivate = new Stripe(
     String(config.implementations.stripe.privateKey),
     { apiVersion }
